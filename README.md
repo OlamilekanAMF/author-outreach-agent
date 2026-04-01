@@ -10,7 +10,9 @@
 ---
 
 ## 📽️ Dashboard Preview
-![Dashboard Showcase](https://raw.githubusercontent.com/username/repo/main/assets/dashboard_mockup.png)
+![Dashboard Showcase] <img width="937" height="440" alt="Screenshot 2026-04-01 133646" src="https://github.com/user-attachments/assets/b4002d1b-dcec-4c81-b26d-a15048d307a9" />
+<img width="936" height="441" alt="Screenshot 2026-04-01 133513" src="https://github.com/user-attachments/assets/e9d0a9a8-7eae-4343-94c8-5e40a39b7903" />
+
 *(Note: Replace with a real screenshot of your http://localhost:8080 once running!)*
 
 ---
