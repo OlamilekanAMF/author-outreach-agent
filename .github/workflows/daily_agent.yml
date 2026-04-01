@@ -1,0 +1,196 @@
+name: Rejoicebookclub Outreach Agent
+
+on:
+  schedule:
+    # 08:00 UTC daily for invitations
+    - cron: '0 8 * * *'
+    # 10:00 UTC daily for follow-ups
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Run Mode'
+        required: true
+        default: 'invitations'
+        type: choice
+        options:
+          - invitations
+          - followups
+          - detect_replies
+          - dry_run
+
+jobs:
+  run_invitations:
+    # Only run invitation job on 08:00 cron OR manual invitation/dry_run trigger
+    if: >
+      github.event_name == 'workflow_dispatch' && 
+      (github.event.inputs.mode == 'invitations' || github.event.inputs.mode == 'dry_run') ||
+      github.event.schedule == '0 8 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+      
+      - name: Create data directories
+        run: |
+          mkdir -p data/run_logs
+          mkdir -p data/failed_queue
+      
+      - name: Restore SQLite database from cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+          restore-keys: authors-db-
+      
+      - name: Detect replies before starting
+        env:
+          IMAP_SERVER: imap.gmail.com
+          IMAP_PORT: 993
+          IMAP_USER: ${{ secrets.IMAP_USER || secrets.GMAIL_SENDER_ADDRESS }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD || secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py --detect-replies
+
+      - name: Run invitation pipeline
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          BREVO_SMTP_USER: ${{ secrets.BREVO_SMTP_USER }}
+          BREVO_SMTP_PASSWORD: ${{ secrets.BREVO_SMTP_PASSWORD }}
+          BREVO_SMTP_HOST: smtp-relay.brevo.com
+          BREVO_SMTP_PORT: 587
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_NAME: ${{ secrets.SENDER_NAME }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_DOC_ID: ${{ secrets.GOOGLE_DOC_ID }}
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+          TRACKING_BASE_URL: ${{ secrets.TRACKING_BASE_URL }}
+          AUTHORS_PER_DAY: 50
+          DRY_RUN: ${{ github.event.inputs.mode == 'dry_run' && 'true' || 'false' }}
+        run: python main.py --run-now
+      
+      - name: Save SQLite database to cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+      
+      - name: Upload run logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-logs-${{ github.run_id }}
+          path: data/run_logs/
+          retention-days: 30
+
+  run_followups:
+    # Only run follow-up job on 10:00 cron OR manual followup trigger
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'followups' ||
+      github.event.schedule == '0 10 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Restore SQLite database from cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+          restore-keys: authors-db-
+      
+      - name: Detect replies before follow-ups
+        env:
+          IMAP_SERVER: imap.gmail.com
+          IMAP_PORT: 993
+          IMAP_USER: ${{ secrets.IMAP_USER || secrets.GMAIL_SENDER_ADDRESS }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD || secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py --detect-replies
+
+      - name: Run follow-up pipeline
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          BREVO_SMTP_USER: ${{ secrets.BREVO_SMTP_USER }}
+          BREVO_SMTP_PASSWORD: ${{ secrets.BREVO_SMTP_PASSWORD }}
+          BREVO_SMTP_HOST: smtp-relay.brevo.com
+          BREVO_SMTP_PORT: 587
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_NAME: ${{ secrets.SENDER_NAME }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_DOC_ID: ${{ secrets.GOOGLE_DOC_ID }}
+          TRACKING_BASE_URL: ${{ secrets.TRACKING_BASE_URL }}
+        run: python main.py --followup-now
+      
+      - name: Save SQLite database to cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+      
+      - name: Upload follow-up logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: followup-logs-${{ github.run_id }}
+          path: data/run_logs/
+          retention-days: 30
+
+  detect_replies_manual:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'detect_replies'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Restore SQLite database from cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+          restore-keys: authors-db-
+      - name: Run reply detection
+        env:
+          IMAP_SERVER: imap.gmail.com
+          IMAP_PORT: 993
+          IMAP_USER: ${{ secrets.IMAP_USER || secrets.GMAIL_SENDER_ADDRESS }}
+          IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD || secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py --detect-replies
+      - name: Save SQLite database to cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}

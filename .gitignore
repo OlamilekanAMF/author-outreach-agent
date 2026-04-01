@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Data and Logs
+agent.log
+data/*.db
+data/*.db-journal
+
+# Secrets and Keys (Google Service Accounts, etc.)
+*.json
+!composer.json
+!package.json
+!package-lock.json
+
+# OS files
+.DS_Store
+Thumbs.db

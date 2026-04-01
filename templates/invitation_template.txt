@@ -1,0 +1,48 @@
+---
+SUBJECT: Invitation to Feature {{BOOK_TITLE}} in Our Upcoming Author Spotlight
+
+Hello {{AUTHOR_NAME}},
+
+I hope you are doing well. My name is Lydia Ravenscroft, and I am the Program
+Director, Reading Circle of Rejoicebookclub, a welcoming community of passionate
+readers who meet regularly to discuss meaningful and engaging books. Alongside our
+monthly discussions, we also host virtual Author Spotlight sessions where writers
+can share their inspiration, creative journey, and the stories behind their work
+with our supportive reading community.
+
+You can also learn more about our community and past author features on our
+website: www.rejoicebookclub.org
+
+Your book, {{BOOK_TITLE}}, drew strong interest from our members because of
+{{BOOK_INTEREST_REASON}}. {{BOOK_CONTEXT_DETAIL}} led to meaningful discussion
+in our group about {{DISCUSSION_THEMES}}. Books that {{BOOK_QUALITY_STATEMENT}}
+always create thoughtful and engaging conversations in our club.
+
+We would be honored to feature you in one of our upcoming Author Spotlight
+sessions, where our members have the opportunity to meet the author behind the
+book, hear what inspired {{BOOK_INSPIRATION_ANGLE}}, and learn more about the
+process of bringing {{BOOK_SUBJECT_DESCRIPTION}} to readers in such a personal
+and detailed way.
+
+Being featured in our spotlight allows readers to connect more deeply with the
+book, and it often brings renewed interest as members continue sharing the
+discussion with other readers in our wider community. Our group especially enjoys
+hearing about {{AUTHOR_JOURNEY_DETAIL}}, and what first inspired an author to
+tell a story like this, so we believe your insight would make for a very
+interesting session.
+
+Our sessions are relaxed, friendly, and focused on the author's journey and the
+story behind the book. If this sounds like something you would enjoy, I would be
+happy to reserve a spot for you in one of our upcoming sessions. We are currently
+organizing this month's schedule, so a quick reply would help us see if we can
+include your book in the next spotlight lineup.
+
+Thank you for writing such an informative and thoughtful {{BOOK_GENRE_LABEL}}.
+Our members would truly enjoy the opportunity to hear from you and learn more
+about your work.
+
+Warm regards,
+Lydia Ravenscroft
+Program Director of Rejoicebookclub
+Rejoicebookclub
+---

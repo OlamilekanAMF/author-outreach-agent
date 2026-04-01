@@ -1,0 +1,24 @@
+---
+SUBJECT: Re: Invitation to Feature {{BOOK_TITLE}} in Our Author Spotlight
+
+Hello {{AUTHOR_NAME}},
+
+I wanted to reach back out briefly in case my earlier message got
+buried — inboxes have a way of doing that.
+
+We would still love to feature you and {{BOOK_TITLE}} in one of our
+upcoming Author Spotlight sessions. Our members have been looking
+forward to {{FOLLOWUP_SPECIFIC_HOOK}}, and we think the conversation
+would be a really good one.
+
+No pressure at all — if the timing does not work right now, I completely
+understand. But if you are open to it, a quick reply is all it takes
+to get you on the schedule.
+
+Either way, thank you again for the work you put into this book.
+
+Warm regards,
+Lydia Ravenscroft
+Program Director of Rejoicebookclub
+Rejoicebookclub
+---

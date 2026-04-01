@@ -1,0 +1,179 @@
+name: Gmail Secondary Channel — Daily Author Outreach
+
+on:
+  schedule:
+    # Invitations: 09:00 UTC (1hr after main pipeline at 08:00)
+    - cron: "0 9 * * *"
+    # Follow-ups: 11:00 UTC (1hr after main follow-ups at 10:00)
+    - cron: "0 11 * * *"
+
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: "invitations"
+        type: choice
+        options:
+          - invitations
+          - followups
+          - detect_replies
+          - dry_run
+
+jobs:
+  gmail_invitations:
+    if: >
+      github.event.schedule == '0 9 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (github.event.inputs.mode == 'invitations' || github.event.inputs.mode == 'dry_run'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+      - run: playwright install chromium --with-deps
+
+      - run: mkdir -p data/run_logs data/failed_queue
+
+      - name: Restore SQLite database
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+          restore-keys: authors-db-
+
+      - name: Detect replies
+        env:
+          IMAP_SERVER: imap.gmail.com
+          IMAP_PORT: 993
+          IMAP_USER: ${{ secrets.GMAIL_SENDER_ADDRESS }}
+          IMAP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py --detect-replies
+
+      - name: Run Gmail invitation pipeline
+        env:
+          # Shared secrets (same as main pipeline)
+          GROQ_API_KEY:                ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL:                  ${{ secrets.GROQ_MODEL }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID:             ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_DOC_ID:               ${{ secrets.GOOGLE_DOC_ID }}
+          BRAVE_API_KEY:               ${{ secrets.BRAVE_API_KEY }}
+          TRACKING_BASE_URL:           ${{ secrets.TRACKING_BASE_URL }}
+          # Gmail-specific secrets
+          GMAIL_SENDER_ADDRESS:        ${{ secrets.GMAIL_SENDER_ADDRESS }}
+          GMAIL_APP_PASSWORD:          ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_SENDER_NAME:           ${{ secrets.GMAIL_SENDER_NAME }}
+          GMAIL_AUTHORS_PER_DAY:       20
+          GMAIL_DRY_RUN: >-
+            ${{ github.event.inputs.mode == 'dry_run' && 'true' || 'false' }}
+        run: python main.py --gmail-run-now
+
+      - name: Save SQLite database
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+
+      - name: Upload Gmail run logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmail-logs-${{ github.run_id }}
+          path: data/run_logs/
+          retention-days: 30
+
+  gmail_followups:
+    if: >
+      github.event.schedule == '0 11 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.event.inputs.mode == 'followups')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - run: pip install -r requirements.txt
+
+      - name: Restore SQLite database
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+          restore-keys: authors-db-
+
+      - name: Detect replies
+        env:
+          IMAP_SERVER: imap.gmail.com
+          IMAP_PORT: 993
+          IMAP_USER: ${{ secrets.GMAIL_SENDER_ADDRESS }}
+          IMAP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py --detect-replies
+
+      - name: Run Gmail follow-up pipeline
+        env:
+          # Shared secrets
+          GROQ_API_KEY:                ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL:                  ${{ secrets.GROQ_MODEL }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID:             ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_DOC_ID:               ${{ secrets.GOOGLE_DOC_ID }}
+          TRACKING_BASE_URL:           ${{ secrets.TRACKING_BASE_URL }}
+          # Gmail-specific secrets
+          GMAIL_SENDER_ADDRESS:        ${{ secrets.GMAIL_SENDER_ADDRESS }}
+          GMAIL_APP_PASSWORD:          ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_SENDER_NAME:           ${{ secrets.GMAIL_SENDER_NAME }}
+          GMAIL_DRY_RUN: >-
+            ${{ github.event.inputs.mode == 'dry_run' && 'true' || 'false' }}
+        run: python main.py --gmail-followup-now
+
+      - name: Save SQLite database
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+
+  detect_replies_manual:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'detect_replies'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Restore SQLite database from cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
+          restore-keys: authors-db-
+      - name: Run reply detection
+        env:
+          IMAP_SERVER: imap.gmail.com
+          IMAP_PORT: 993
+          IMAP_USER: ${{ secrets.GMAIL_SENDER_ADDRESS }}
+          IMAP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python main.py --detect-replies
+      - name: Save SQLite database to cache
+        uses: actions/cache@v4
+        with:
+          path: data/authors.db
+          key: authors-db-${{ github.run_number }}
