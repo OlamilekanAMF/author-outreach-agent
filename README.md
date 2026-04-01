@@ -1,85 +1,104 @@
-# Triumphant Author Outreach Agent
+# 📚 Triumphant Author Outreach Agent 🚀
 
-Production-grade, fully automated AI agent for Rejoicebookclub to discover authors, verify contact data, and send personalized spotlight invitations.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![AI-Powered](https://img.shields.io/badge/AI-GPT--4o%20%2B%20Gemini--Pro-orange.svg)](https://openai.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Automation](https://img.shields.io/badge/Automation-GitHub--Actions-green.svg)](https://github.com/features/actions)
+
+> **Enterprise-grade, multi-channel AI agent designed to discover authors, verify contact data, and manage intelligent, personalized outreach at scale.**
+
+---
+
+## 📽️ Dashboard Preview
+![Dashboard Showcase](https://raw.githubusercontent.com/username/repo/main/assets/dashboard_mockup.png)
+*(Note: Replace with a real screenshot of your http://localhost:8080 once running!)*
+
+---
 
 ## 🚀 Key Features
-- **Daily Discovery:** Automatically finds 50 unique authors from Google Books, Goodreads, etc.
-- **AI-Personalization:** Uses GPT-4o to fill invitation templates with book-specific details.
-- **3-Layer Verification:** Syntax check, MX record lookup, and SMTP probe.
-- **Smart Follow-ups:** Automatically follows up with authors who opened the email but didn't reply after 4 days.
-- **Full Integration:** Logs everything to Google Sheets and generates daily reports in Google Docs.
-- **Error Tolerant:** Robust retry logic and SQLite deduplication.
 
-## 📁 Project Structure
-- `agent/`: Core logic (orchestrator, discoverer, collector, verifier, etc.)
-- `integrations/`: Third-party APIs (Google, OpenAI)
-- `templates/`: Email copy templates
-- `config/`: Environment configuration
-- `data/`: SQLite database and logs
+### 🧠 **1. AI Intelligence Core**
+- **Personalized invitations:** Uses **GPT-4o** to write unique, hyper-contextual emails based on an author's real books, bio, and genre.
+- **Sentiment Analysis:** Integrated with **Gemini Pro** to classify incoming replies (Interested, Not Interested, Asking Price, etc.) automatically.
+- **Smart Follow-ups:** Maintains conversation state and generates context-aware follow-up emails based on full thread history.
 
-## 🛠️ Setup Instructions
+### 📊 **2. Enterprise Monitoring (Live Dashboard)**
+- **Real-time Metrics:** Track open rates, reply rates, and weekly growth via a sleek, modern Flask-powered UI.
+- **A/B Testing Engine:** Automatically tests different email tones (Variant A vs B) and displays conversion stats to optimize outreach strategy.
+- **Approval Queue:** Optional "Human-in-the-Loop" mode to vet AI drafts before they are sent.
 
-  ## Web Search Setup (Free)
+### 🛡️ **3. Deliverability & Safety**
+- **3-Layer Verification:** Syntax check, MX record lookup, and SMTP handshake probing to maintain a near-zero bounce rate.
+- **Warmup Mode:** Dynamically scales daily email volume to protect domain reputation.
+- **Circuit Breaker:** Automatically pauses outreach if the bounce rate exceeds a defined threshold (e.g., 2%).
+- **Smart Scheduling:** Enforces UTC send windows to ensure emails land in inboxes during local business hours.
 
-  ### Option A — DuckDuckGo (zero setup needed)
-  Works immediately with no configuration.
-  No API key, no account, no limits.
-  The agent uses this automatically as the default.
+### 🔗 **4. Custom Tracking & CRM**
+- **First-Party Tracking:** Built-in tracking pixel and click-redirect server (no external services required).
+- **Lead Scoring:** Authors earn points for opens (+1) and clicks (+5), highlighting "HOT" leads on the dashboard.
+- **Multi-Channel Sync:** Seamlessly integrates with Google Sheets, Google Docs, and a local SQLite master database.
 
-  ### Option B — Google Custom Search (optional, better results)
-  Adds 100 higher-quality searches/day on top of DuckDuckGo.
+---
 
-  1. Go to console.cloud.google.com
-  2. Create a new project (free)
-  3. Enable "Custom Search API" in the API Library
-  4. Go to Credentials → Create API Key → copy it
-     → paste as GOOGLE_CSE_API_KEY in .env
+## 🛠️ Tech Stack
 
-  5. Go to programmablesearchengine.google.com
-  6. Click "Add" → Search the entire web → Create
-  7. Copy the "Search engine ID"
-     → paste as GOOGLE_CSE_ID in .env
+- **Language:** Python 3.10+
+- **AI/LLM:** Groq (LLaMA 3.3), OpenAI (GPT-4o), Google Gemini Pro
+- **Backend:** Flask (Webhook Server + Dashboard)
+- **Database:** SQLite (Relational State Management)
+- **Integrations:** SendGrid/Brevo SMTP, Google Sheets API, Google Docs API
+- **Image Gen:** Pillow (Local high-quality visual personalization)
 
-  Both steps take under 5 minutes and cost nothing.
-  If you skip this, DuckDuckGo handles all searches automatically.
+---
 
-### 1. Prerequisites
-- Python 3.11+
-- Google Cloud Service Account (with Sheets & Docs API access)
-- OpenAI API Key
-- SendGrid API Key (and verified sender identity)
+## 🏗️ Architecture
 
-### 2. Installation
-```bash
-cd rejoicebookclub_agent
-pip install -r requirements.txt
-playwright install chromium
+```mermaid
+graph TD
+    A[Discoverer: Google/Goodreads] --> B[Collector: Scraper + GPT]
+    B --> C{Verifier}
+    C -- Valid --> D[Email Writer: GPT-4o]
+    D --> E[Image Gen: Pillow]
+    E --> F{Approval Queue}
+    F -- Approved --> G[Sender: Brevo/Gmail]
+    G --> H[Webhook Tracking Server]
+    H --> I[SQLite / Google Sheets]
+    I --> J[Gemini Sentiment Analysis]
+    J --> K[Dashboard UI]
 ```
 
-### 3. Configuration
-1. Copy `.env.example` to `.env`.
-2. Fill in all required API keys and IDs.
-3. Place your Google Service Account JSON file in the root or update the path in `.env`.
+---
 
-### 4. Running the Agent
-- **Start the Scheduler:**
-  ```bash
-  python main.py
-  ```
-- **Run Discovery/Invites Now:**
-  ```bash
-  python main.py --run-now
-  ```
-- **Run Follow-ups Now:**
-  ```bash
-  python main.py --followup-now
-  ```
-- **Start Webhook Server (for open tracking):**
-  ```bash
-  python main.py --webhook
-  ```
+## ⚙️ Setup & Installation
 
-## 🔐 Security
-- Zero hardcoded secrets (all in `.env`).
-- SQLite tracks contacted authors to ensure no one is emailed twice.
-- Banned phrase filter ensures professional communication.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/rejoicebookclub_agent.git
+   cd rejoicebookclub_agent
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure Environment:**
+   - Copy `.env.example` to `.env`.
+   - Fill in your API keys (OpenAI, Groq, Gemini, Google Service Account).
+
+4. **Launch:**
+   - **Run Outreach:** `python main.py --run-now`
+   - **Start Dashboard:** `python main.py --dashboard` (Access at `http://localhost:8080`)
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👨‍💻 Author
+**[Olamilekan Amujosafe (olamilekanAMF)]**
+*Full Stack & AI Automation Engineer*
+[Instagram](https://instagram.com/lekjason22) | [Portfolio](https://olamilekanamf-portfolio.netlify.app/)
