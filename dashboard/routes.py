@@ -5,7 +5,7 @@ from functools import wraps
 from config.settings import settings
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-only-change-me")
 
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "admin123")
 DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", 8080))
