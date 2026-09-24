@@ -1,2 +1,30 @@
+[project]
+name = "author-outreach-agent"
+version = "0.1.0"
+description = "Production-grade AI agent for author outreach"
+requires-python = ">=3.12"
+dependencies = [
+    "openai>=1.0.0",
+    "google-generativeai>=0.5.0",
+    "httpx>=0.27.0",
+    "beautifulsoup4>=4.12.0",
+    "playwright>=1.44.0",
+    "fake-useragent>=1.5.0",
+    "gspread>=6.0.0",
+    "google-auth>=2.29.0",
+    "google-api-python-client>=2.120.0",
+    "google-auth-oauthlib>=1.2.0",
+    "google-auth-httplib2>=0.2.0",
+    "pyIsEmail>=1.4.0",
+    "dnspython>=2.6.0",
+    "flask>=3.0.0",
+    "starkbank-ecdsa>=2.0.0",
+    "tenacity>=8.3.0",
+    "python-dotenv>=1.0.0",
+    "sqlite-utils>=3.35.0",
+    "rich>=13.7.0",
+    "Pillow>=10.0.0",
+]
+
 [tool.vercel]
 entrypoint = "dashboard.routes:app"
