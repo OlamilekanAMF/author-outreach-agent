@@ -6,6 +6,7 @@ from integrations.gemini_client import gemini_client
 from datetime import datetime
 import logging
 import io
+import os
 from ellipticcurve.ecdsa import Ecdsa
 from ellipticcurve.publicKey import PublicKey
 from ellipticcurve.signature import Signature
@@ -134,7 +135,10 @@ def inbound_replies():
     return jsonify({"status": "ok"}), 200
 
 def run():
-    app.run(host="0.0.0.0", port=settings.WEBHOOK_PORT)
+    # Render and other hosting providers expose the service port as PORT.
+    # Keep WEBHOOK_PORT as a local-development fallback for compatibility.
+    port = int(os.environ.get("PORT") or os.environ.get("WEBHOOK_PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     run()
