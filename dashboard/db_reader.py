@@ -3,6 +3,7 @@ import os
 import json
 from datetime import datetime, timedelta
 from config.settings import settings
+import logging
 
 DB_PATH = settings.DB_PATH
 
@@ -11,15 +12,31 @@ class DBReader:
         self.db_path = DB_PATH
 
     def _get_connection(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA query_only = ON")
-        return conn
+        # Defensive: if DB file or directory doesn't exist, return None so callers can handle it
+        try:
+            if not self.db_path or not os.path.exists(self.db_path):
+                logging.getLogger(__name__).warning("Database file not found at %s", self.db_path)
+                return None
+
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA query_only = ON")
+            return conn
+        except Exception as e:
+            logging.getLogger(__name__).exception("Failed to open DB connection: %s", e)
+            return None
 
     def get_overview_stats(self):
         conn = self._get_connection()
+        if not conn:
+            # Return sensible defaults when DB is unavailable
+            return {
+                'main_total': 0, 'main_sent': 0, 'main_opens': 0, 'main_replies': 0, 'main_followups': 0,
+                'gmail_total': 0, 'gmail_sent': 0, 'gmail_opens': 0, 'gmail_replies': 0, 'gmail_followups': 0,
+                'total_sent': 0, 'total_opens': 0, 'total_replies': 0
+            }
+
         stats = {}
-        
         # Combine counts from both tables
         for table in ['contacted_authors', 'gmail_contacted_authors']:
             try:
@@ -32,14 +49,14 @@ class DBReader:
                         SUM(CASE WHEN followup_sent = 1 THEN 1 ELSE 0 END) as followups
                     FROM {table}
                 """).fetchone()
-                
+
                 prefix = 'main_' if table == 'contacted_authors' else 'gmail_'
                 stats[prefix + 'total'] = row['total'] or 0
                 stats[prefix + 'sent'] = row['sent'] or 0
                 stats[prefix + 'opens'] = row['opens'] or 0
                 stats[prefix + 'replies'] = row['replies'] or 0
                 stats[prefix + 'followups'] = row['followups'] or 0
-            except:
+            except Exception:
                 prefix = 'main_' if table == 'contacted_authors' else 'gmail_'
                 stats[prefix + 'total'] = 0
                 stats[prefix + 'sent'] = 0
@@ -50,15 +67,18 @@ class DBReader:
         stats['total_sent'] = stats['main_sent'] + stats['gmail_sent']
         stats['total_opens'] = stats['main_opens'] + stats['gmail_opens']
         stats['total_replies'] = stats['main_replies'] + stats['gmail_replies']
-        
+
         conn.close()
         return stats
 
     def get_daily_send_counts(self, days=30):
         conn = self._get_connection()
+        if not conn:
+            return []
+
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days)
-        
+
         query = """
             SELECT date(contacted_at) as day, COUNT(*) as count, 'main' as channel
             FROM contacted_authors
@@ -71,21 +91,24 @@ class DBReader:
             GROUP BY day
             ORDER BY day ASC
         """
-        
+
         rows = conn.execute(query, (start_date.isoformat(), start_date.isoformat())).fetchall()
         conn.close()
-        
+
         result = {}
         for row in rows:
             day = row['day']
             if day not in result:
                 result[day] = {'main': 0, 'gmail': 0}
             result[day][row['channel']] = row['count']
-            
+
         return [{"day": k, "main": v['main'], "gmail": v['gmail']} for k, v in sorted(result.items())]
 
     def get_genre_performance(self):
         conn = self._get_connection()
+        if not conn:
+            return []
+
         query = """
             SELECT genres, COUNT(*) as total, 
                    SUM(CASE WHEN open_detected = 1 THEN 1 ELSE 0 END) as opens,
@@ -99,7 +122,7 @@ class DBReader:
         """
         rows = conn.execute(query).fetchall()
         conn.close()
-        
+
         genres_stats = {}
         for row in rows:
             raw_genres = row['genres'] or 'Unknown'
@@ -111,17 +134,20 @@ class DBReader:
                 genres_stats[g]['total'] += row['total']
                 genres_stats[g]['opens'] += row['opens']
                 genres_stats[g]['replies'] += row['replies']
-        
+
         # Sort by total and take top 10
         sorted_genres = sorted(genres_stats.items(), key=lambda x: x[1]['total'], reverse=True)[:10]
         return [{"genre": k, **v} for k, v in sorted_genres]
 
     def get_weekly_growth(self):
         conn = self._get_connection()
+        if not conn:
+            return {"this_week": 0, "last_week": 0, "growth": 0}
+
         now = datetime.utcnow()
         this_week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         last_week_start = this_week_start - timedelta(days=7)
-        
+
         def get_count_for_range(start, end):
             q = """
                 SELECT COUNT(*) FROM (
@@ -135,12 +161,15 @@ class DBReader:
         this_week = get_count_for_range(this_week_start, now)
         last_week = get_count_for_range(last_week_start, this_week_start)
         conn.close()
-        
+
         growth = ((this_week - last_week) / last_week * 100) if last_week > 0 else 100
         return {"this_week": this_week, "last_week": last_week, "growth": round(growth, 1)}
 
     def get_ab_test_stats(self):
         conn = self._get_connection()
+        if not conn:
+            return []
+
         query = """
             SELECT 
                 ab_variant as variant,
@@ -161,6 +190,9 @@ class DBReader:
 
     def get_pending_approvals(self):
         conn = self._get_connection()
+        if not conn:
+            return []
+
         query = """
             SELECT id, full_name, email, source_platform, contacted_at as found_at, 'main' as channel
             FROM contacted_authors WHERE approval_status = 'pending'
@@ -175,19 +207,25 @@ class DBReader:
 
     def update_approval_status(self, author_id, status):
         conn = self._get_connection()
+        if not conn:
+            return False
+
         conn.execute("PRAGMA query_only = OFF") # Ensure we can write
-        
+
         # Try both tables
         updated = conn.execute("UPDATE contacted_authors SET approval_status = ? WHERE id = ?", (status, author_id)).rowcount
         if not updated:
             updated = conn.execute("UPDATE gmail_contacted_authors SET approval_status = ? WHERE id = ?", (status, author_id)).rowcount
-        
+
         conn.commit()
         conn.close()
         return bool(updated)
 
     def get_status_breakdown(self):
         conn = self._get_connection()
+        if not conn:
+            return {}
+
         query = """
             SELECT email_status, COUNT(*) as count FROM contacted_authors GROUP BY email_status
             UNION ALL
@@ -195,26 +233,34 @@ class DBReader:
         """
         rows = conn.execute(query).fetchall()
         conn.close()
-        
+
         breakdown = {}
         for row in rows:
             status = row['email_status'] or 'unknown'
             breakdown[status] = breakdown.get(status, 0) + row['count']
-            
+
         return breakdown
 
     def get_authors_paginated(self, page=1, per_page=20, status_filter=None, search_query=None, channel='all'):
         conn = self._get_connection()
+        if not conn:
+            return {
+                "authors": [],
+                "total": 0,
+                "pages": 0,
+                "current_page": page
+            }
+
         offset = (page - 1) * per_page
-        
+
         # Build dynamic query
         tables = []
         if channel in ['all', 'main']: tables.append(('contacted_authors', 'main'))
         if channel in ['all', 'gmail']: tables.append(('gmail_contacted_authors', 'gmail'))
-        
+
         base_queries = []
         params = []
-        
+
         for table, ch_name in tables:
             q = f"SELECT id, full_name, email, email_status, contacted_at, open_detected, replied, '{ch_name}' as channel FROM {table}"
             where_clauses = []
@@ -225,20 +271,20 @@ class DBReader:
                 where_clauses.append("(full_name LIKE ? OR email LIKE ?)")
                 params.append(f"%{search_query}%")
                 params.append(f"%{search_query}%")
-            
+
             if where_clauses:
                 q += " WHERE " + " AND ".join(where_clauses)
             base_queries.append(q)
-            
+
         final_query = " UNION ALL ".join(base_queries) + " ORDER BY contacted_at DESC LIMIT ? OFFSET ?"
         count_query = "SELECT COUNT(*) as total FROM (" + " UNION ALL ".join(base_queries) + ")"
-        
+
         # Count params are the same as data params minus limit/offset
         total = conn.execute(count_query, params).fetchone()['total']
-        
+
         data_params = params + [per_page, offset]
         rows = conn.execute(final_query, data_params).fetchall()
-        
+
         conn.close()
         return {
             "authors": [dict(row) for row in rows],
@@ -249,17 +295,22 @@ class DBReader:
 
     def get_author_detail(self, author_id):
         conn = self._get_connection()
+        if not conn:
+            return None
         # Search in both tables
         author = conn.execute("SELECT *, 'main' as channel FROM contacted_authors WHERE id = ?", (author_id,)).fetchone()
         if not author:
             author = conn.execute("SELECT *, 'gmail' as channel FROM gmail_contacted_authors WHERE id = ?", (author_id,)).fetchone()
-        
+
         conn.close()
         return dict(author) if author else None
 
     def get_activity_log(self, limit=50):
         # Recent sends and opens
         conn = self._get_connection()
+        if not conn:
+            return []
+
         query = """
             SELECT 'email_sent' as type, full_name, contacted_at as timestamp, 'main' as channel 
             FROM contacted_authors WHERE email_status = 'sent'
@@ -280,6 +331,8 @@ class DBReader:
 
     def get_email_draft(self, author_id):
         conn = self._get_connection()
+        if not conn:
+            return None
         draft = conn.execute("SELECT * FROM email_drafts WHERE author_id = ?", (author_id,)).fetchone()
         if not draft:
             draft = conn.execute("SELECT * FROM gmail_email_drafts WHERE author_id = ?", (author_id,)).fetchone()
@@ -288,12 +341,16 @@ class DBReader:
 
     def get_system_logs(self, limit=100):
         conn = self._get_connection()
+        if not conn:
+            return []
         rows = conn.execute("SELECT * FROM system_logs ORDER BY timestamp DESC LIMIT ?", (limit,)).fetchall()
         conn.close()
         return [dict(row) for row in rows]
 
     def get_top_leads(self, limit=10):
         conn = self._get_connection()
+        if not conn:
+            return []
         query = """
             SELECT id, full_name, email, lead_score, reply_sentiment, 'main' as channel
             FROM contacted_authors WHERE lead_score > 0 OR reply_sentiment = 'interested'
