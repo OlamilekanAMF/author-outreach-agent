@@ -5,33 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Login - Rejoicebookclub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #f3f4f6; }
-    </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Agent Dashboard</h1>
-        {% if error %}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {{ error }}
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
+    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+        <div class="flex justify-center mb-6">
+            <div class="bg-blue-600 text-white rounded-full w-12 h-12 flex items-center justify-center text-xl font-bold">R</div>
         </div>
-        {% endif %}
-        <form method="POST">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
-                    Password
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                       id="password" name="password" type="password" placeholder="******************" required>
-            </div>
-            <div class="flex items-center justify-between">
-                <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition duration-300" 
-                        type="submit">
-                    Sign In
-                </button>
-            </div>
-        </form>
+        <h1 class="text-2xl font-bold mb-2 text-center text-gray-800">Agent Dashboard</h1>
+        <p class="text-center text-gray-500 text-sm mb-6">Rejoicebookclub Author Outreach</p>
+
+        <div id="error-box" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm"></div>
+
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+            <input
+                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                id="password" type="password" placeholder="Enter your password" required
+                onkeydown="if(event.key==='Enter') login()"
+            >
+        </div>
+
+        <button
+            onclick="login()"
+            id="login-btn"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full transition duration-300"
+        >
+            Sign In
+        </button>
     </div>
+
+    <script>
+        const API_BASE = "https://author-outreach-agent.onrender.com";
+
+        // Redirect if already logged in
+        if (localStorage.getItem("dashboard_token")) {
+            window.location.href = "/dashboard.html";
+        }
+
+        async function login() {
+            const password = document.getElementById("password").value;
+            const btn      = document.getElementById("login-btn");
+            const errorBox = document.getElementById("error-box");
+
+            if (!password) return;
+
+            btn.textContent = "Signing in...";
+            btn.disabled    = true;
+            errorBox.classList.add("hidden");
+
+            try {
+                const res = await fetch(`${API_BASE}/api/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.token) {
+                    localStorage.setItem("dashboard_token", data.token);
+                    window.location.href = "/dashboard.html";
+                } else {
+                    errorBox.textContent = data.error || "Invalid password";
+                    errorBox.classList.remove("hidden");
+                }
+            } catch (err) {
+                errorBox.textContent = "Could not connect to server. Please try again.";
+                errorBox.classList.remove("hidden");
+            } finally {
+                btn.textContent = "Sign In";
+                btn.disabled    = false;
+            }
+        }
+    </script>
 </body>
 </html>
