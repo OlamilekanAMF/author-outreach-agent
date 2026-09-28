@@ -29,3 +29,4 @@ sqlite-utils>=3.35.0
 rich>=13.7.0
 # Image generation
 Pillow>=10.0.0
+flask-cors
