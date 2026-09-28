@@ -1,4 +1,6 @@
 import gspread
+import json
+import os
 from google.oauth2.service_account import Credentials
 from config.settings import settings
 from models import AuthorProfile, DailySummary
@@ -14,8 +16,14 @@ class GoogleSheetsClient:
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
         ]
-        self.creds = Credentials.from_service_account_file(
-            settings.GOOGLE_SERVICE_ACCOUNT_JSON, scopes=self.scope
+
+        json_content = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+        if not json_content:
+            raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON environment variable is not set")
+
+        service_account_info = json.loads(json_content)
+        self.creds = Credentials.from_service_account_info(
+            service_account_info, scopes=self.scope
         )
         self.client = gspread.authorize(self.creds)
         self.sheet_id = settings.GOOGLE_SHEET_ID
@@ -132,11 +140,9 @@ class GoogleSheetsClient:
         def _run():
             with self._lock:
                 try:
-                    # Ensure tab exists or get it
                     try:
                         sheet = self._get_sheet().worksheet("Gmail Channel")
                     except gspread.exceptions.WorksheetNotFound:
-                        # Create if not exists with headers
                         sheet = self._get_sheet().add_worksheet("Gmail Channel", rows=1000, cols=26)
                         headers = [
                             "Author ID", "Full Name", "Email", "Email Source", "Email Verified",
