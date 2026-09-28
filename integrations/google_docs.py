@@ -4,15 +4,19 @@ from config.settings import settings
 from models import AuthorProfile, DailySummary, FollowupSummary
 import logging
 from datetime import datetime
+import json
+import os
 
 logger = logging.getLogger(__name__)
 
 class GoogleDocsClient:
     def __init__(self):
-        self.creds = Credentials.from_service_account_file(
-            settings.GOOGLE_SERVICE_ACCOUNT_JSON,
+        json_content = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
+        service_account_info = json.loads(json_content)
+        self.creds = Credentials.from_service_account_info(
+            service_account_info,
             scopes=["https://www.googleapis.com/auth/documents"]
-        )
+)
         self.service = build("docs", "v1", credentials=self.creds)
         self.doc_id = settings.GOOGLE_DOC_ID
 
