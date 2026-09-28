@@ -25,30 +25,25 @@ from ellipticcurve.signature import Signature
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-me-in-production")
 
-# Allow Vercel frontend to call this API
-VERCEL_ORIGIN = os.getenv("VERCEL_ORIGIN", "https://your-dashboard.vercel.app")
-CORS(app,
-     origins=[VERCEL_ORIGIN],
-     supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "OPTIONS"])
+# CORS — allow all origins so Vercel frontend can connect
+CORS(app, supports_credentials=False)
 
 @app.after_request
 def add_cors_headers(response):
-    origin = request.headers.get("Origin", "")
-    if origin == VERCEL_ORIGIN:
-        response.headers["Access-Control-Allow-Origin"]      = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Headers"]     = "Content-Type, Authorization"
-        response.headers["Access-Control-Allow-Methods"]     = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     return response
 
-@app.route("/api/login", methods=["OPTIONS"])
-@app.route("/api/logout", methods=["OPTIONS"])
-@app.route("/api/stats", methods=["OPTIONS"])
-@app.route("/api/authors", methods=["OPTIONS"])
-def handle_options():
-    return "", 204
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        from flask import make_response
+        res = make_response()
+        res.headers["Access-Control-Allow-Origin"]  = "*"
+        res.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        res.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        return res, 204
 
 DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "admin123")
 DASHBOARD_TOKEN    = os.getenv("DASHBOARD_TOKEN",    "change-this-secret-token")
