@@ -50,6 +50,10 @@ DASHBOARD_TOKEN    = os.getenv("DASHBOARD_TOKEN",    "change-this-secret-token")
 
 logger = logging.getLogger(__name__)
 
+# Initialize DB on module load (works for both gunicorn and direct run)
+from init_db import init_db
+init_db()
+
 
 # ─────────────────────────────────────────────
 # Auth helpers
@@ -376,4 +380,7 @@ def health():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     logging.basicConfig(level=logging.INFO)
+    # Initialize database tables on startup
+    from init_db import init_db
+    init_db()
     app.run(host="0.0.0.0", port=port)
