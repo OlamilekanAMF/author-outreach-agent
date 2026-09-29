@@ -68,6 +68,7 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.GROQ_API_KEY }}
           BREVO_SMTP_USER: ${{ secrets.BREVO_SMTP_USER }}
           BREVO_SMTP_PASSWORD: ${{ secrets.BREVO_SMTP_PASSWORD }}
           BREVO_SMTP_HOST: smtp-relay.brevo.com
@@ -137,6 +138,7 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          OPENAI_API_KEY: ${{ secrets.GROQ_API_KEY }}
           BREVO_SMTP_USER: ${{ secrets.BREVO_SMTP_USER }}
           BREVO_SMTP_PASSWORD: ${{ secrets.BREVO_SMTP_PASSWORD }}
           BREVO_SMTP_HOST: smtp-relay.brevo.com
