@@ -598,9 +598,11 @@
         document.getElementById("status-filter").addEventListener("change", () => { currentPage = 1; loadAuthors(); });
         document.getElementById("channel-filter").addEventListener("change", () => { currentPage = 1; loadAuthors(); });
 
-        // ── Init ─────────────────────────────────────────────
-        refreshData();
-        setInterval(refreshData, 60000);
+       // ── Init ─────────────────────────────────────────────
+        window.addEventListener("load", () => {
+            refreshData();
+            setInterval(refreshData, 60000);
+        });
     </script>
 </body>
 </html>
