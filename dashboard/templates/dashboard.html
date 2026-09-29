@@ -249,7 +249,7 @@
         async function fetchAPI(endpoint) {
             try {
                 const res = await fetch(`${API_BASE}${endpoint}`, {
-                    headers: { "Authorization": `Bearer ${token}` }
+                   headers: { "Authorization": `Bearer ${localStorage.getItem("dashboard_token")}` }
                 });
                 if (res.status === 401) {
                     localStorage.removeItem("dashboard_token");
