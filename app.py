@@ -364,6 +364,54 @@ def inbound_replies():
     return jsonify({"status": "ok"}), 200
 
 
+
+# ─────────────────────────────────────────────
+# Pipeline trigger endpoints (called by GitHub Actions)
+# ─────────────────────────────────────────────
+
+@app.route("/run/daily", methods=["POST"])
+@token_required
+def run_daily():
+    import threading
+    def _run():
+        from agent.orchestrator import orchestrator
+        orchestrator.run_daily_pipeline()
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "daily pipeline started"}), 200
+
+
+@app.route("/run/followup", methods=["POST"])
+@token_required
+def run_followup():
+    import threading
+    def _run():
+        from agent.followup_manager import followup_manager
+        followup_manager.run_followup_pipeline()
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "followup pipeline started"}), 200
+
+
+@app.route("/run/gmail", methods=["POST"])
+@token_required
+def run_gmail():
+    import threading
+    def _run():
+        from gmail_channel.gmail_orchestrator import run_gmail_pipeline
+        run_gmail_pipeline()
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "gmail pipeline started"}), 200
+
+
+@app.route("/run/detect-replies", methods=["POST"])
+@token_required
+def run_detect_replies():
+    import threading
+    def _run():
+        from agent.reply_detector import detect_replies
+        detect_replies()
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "reply detection started"}), 200
+
 # ─────────────────────────────────────────────
 # Health check
 # ─────────────────────────────────────────────
