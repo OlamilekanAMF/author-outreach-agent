@@ -2,31 +2,46 @@ name: Gmail Secondary Channel — Daily Author Outreach
 
 on:
   schedule:
-    - cron: '0 11 * * 1-5'  # 11 AM UTC Mon-Fri (12 PM Lagos time)
-  workflow_dispatch:         # allow manual trigger from GitHub UI
+    - cron: '0 11 * * 1-5'   # 11 AM UTC = 12 PM Lagos — main Gmail outreach
+    - cron: '0 15 * * 1-5'   # 3 PM UTC  = 4 PM Lagos  — Gmail follow-ups
+  workflow_dispatch:
 
 jobs:
   trigger-gmail:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Gmail Agent on Render
+      - name: Trigger Gmail Outreach on Render
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 11 * * 1-5'
         run: |
-          echo "Triggering Gmail channel agent..."
+          echo "Triggering Gmail outreach pipeline..."
           response=$(curl -s -w "\n%{http_code}" -X POST \
             "https://outreach-agent-eo4a.onrender.com/run/gmail" \
             -H "Authorization: Bearer ${{ secrets.DASHBOARD_TOKEN }}" \
             -H "Content-Type: application/json" \
             --max-time 30)
-
           body=$(echo "$response" | head -n -1)
           status=$(echo "$response" | tail -n 1)
-
-          echo "Response status: $status"
-          echo "Response body: $body"
-
+          echo "Status: $status | Response: $body"
           if [ "$status" -eq 200 ] || [ "$status" -eq 202 ]; then
-            echo "✅ Gmail agent triggered successfully!"
+            echo "✅ Gmail pipeline triggered!"
           else
-            echo "❌ Failed to trigger Gmail agent (HTTP $status)"
-            exit 1
+            echo "❌ Failed (HTTP $status)"; exit 1
+          fi
+
+      - name: Trigger Gmail Follow-Up on Render
+        if: github.event.schedule == '0 15 * * 1-5'
+        run: |
+          echo "Triggering Gmail follow-up pipeline..."
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://outreach-agent-eo4a.onrender.com/run/gmail-followup" \
+            -H "Authorization: Bearer ${{ secrets.DASHBOARD_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --max-time 30)
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "Status: $status | Response: $body"
+          if [ "$status" -eq 200 ] || [ "$status" -eq 202 ]; then
+            echo "✅ Gmail follow-up triggered!"
+          else
+            echo "❌ Failed (HTTP $status)"; exit 1
           fi
