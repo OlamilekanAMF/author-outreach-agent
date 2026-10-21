@@ -390,8 +390,8 @@ def run_agent():
     def _run():
         try:
             logger.info("▶ Main agent pipeline started")
-            from main import run_pipeline
-            run_pipeline()
+            from agent.orchestrator import orchestrator
+            orchestrator.run_daily_pipeline()
             logger.info("✅ Main agent pipeline finished")
         except Exception as e:
             logger.error(f"Main agent pipeline error: {e}")
@@ -399,21 +399,55 @@ def run_agent():
     return jsonify({"status": "started", "message": "Main agent pipeline triggered"}), 202
 
 
+@app.route("/run/followup", methods=["POST"])
+@token_required
+def run_followup():
+    """Trigger the main channel follow-up pipeline in a background thread."""
+    import threading
+    def _run():
+        try:
+            logger.info("▶ Follow-up pipeline started")
+            from agent.followup_manager import followup_manager
+            followup_manager.run_followup_pipeline()
+            logger.info("✅ Follow-up pipeline finished")
+        except Exception as e:
+            logger.error(f"Follow-up pipeline error: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "started", "message": "Follow-up pipeline triggered"}), 202
+
+
 @app.route("/run/gmail", methods=["POST"])
 @token_required
 def run_gmail():
-    """Trigger the Gmail channel pipeline in a background thread."""
+    """Trigger the Gmail channel outreach pipeline in a background thread."""
     import threading
     def _run():
         try:
             logger.info("▶ Gmail channel pipeline started")
-            from gmail_pipeline import run_gmail_pipeline
+            from gmail_channel.gmail_orchestrator import run_gmail_pipeline
             run_gmail_pipeline()
             logger.info("✅ Gmail channel pipeline finished")
         except Exception as e:
             logger.error(f"Gmail pipeline error: {e}")
     threading.Thread(target=_run, daemon=True).start()
     return jsonify({"status": "started", "message": "Gmail channel pipeline triggered"}), 202
+
+
+@app.route("/run/gmail-followup", methods=["POST"])
+@token_required
+def run_gmail_followup():
+    """Trigger the Gmail channel follow-up pipeline in a background thread."""
+    import threading
+    def _run():
+        try:
+            logger.info("▶ Gmail follow-up pipeline started")
+            from gmail_channel.gmail_followup import run_gmail_followup_pipeline
+            run_gmail_followup_pipeline()
+            logger.info("✅ Gmail follow-up pipeline finished")
+        except Exception as e:
+            logger.error(f"Gmail follow-up pipeline error: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "started", "message": "Gmail follow-up pipeline triggered"}), 202
 
 
 # ── Database init (keep for backward compat, non-fatal) ──────
