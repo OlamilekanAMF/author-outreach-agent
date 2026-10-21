@@ -378,6 +378,44 @@ def webhook_inbound():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Agent trigger endpoints ───────────────────────────────────
+# Called by GitHub Actions workflows via curl.
+# Render has all the env vars; GitHub only needs DASHBOARD_TOKEN.
+
+@app.route("/run/agent", methods=["POST"])
+@token_required
+def run_agent():
+    """Trigger the main Brevo outreach pipeline in a background thread."""
+    import threading
+    def _run():
+        try:
+            logger.info("▶ Main agent pipeline started")
+            from main import run_pipeline
+            run_pipeline()
+            logger.info("✅ Main agent pipeline finished")
+        except Exception as e:
+            logger.error(f"Main agent pipeline error: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "started", "message": "Main agent pipeline triggered"}), 202
+
+
+@app.route("/run/gmail", methods=["POST"])
+@token_required
+def run_gmail():
+    """Trigger the Gmail channel pipeline in a background thread."""
+    import threading
+    def _run():
+        try:
+            logger.info("▶ Gmail channel pipeline started")
+            from gmail_pipeline import run_gmail_pipeline
+            run_gmail_pipeline()
+            logger.info("✅ Gmail channel pipeline finished")
+        except Exception as e:
+            logger.error(f"Gmail pipeline error: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "started", "message": "Gmail channel pipeline triggered"}), 202
+
+
 # ── Database init (keep for backward compat, non-fatal) ──────
 def _try_init_db():
     try:
