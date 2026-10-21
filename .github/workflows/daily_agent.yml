@@ -2,31 +2,46 @@ name: Rejoicebookclub Outreach Agent
 
 on:
   schedule:
-    - cron: '0 10 * * 1-5'  # 10 AM UTC Mon-Fri (11 AM Lagos time)
-  workflow_dispatch:         # allow manual trigger from GitHub UI
+    - cron: '0 10 * * 1-5'   # 10 AM UTC = 11 AM Lagos — main outreach
+    - cron: '0 14 * * 1-5'   # 2 PM UTC  = 3 PM Lagos  — follow-ups
+  workflow_dispatch:
 
 jobs:
   trigger-agent:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Main Agent on Render
+      - name: Trigger Main Outreach on Render
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 10 * * 1-5'
         run: |
-          echo "Triggering main outreach agent..."
+          echo "Triggering main outreach pipeline..."
           response=$(curl -s -w "\n%{http_code}" -X POST \
             "https://outreach-agent-eo4a.onrender.com/run/agent" \
             -H "Authorization: Bearer ${{ secrets.DASHBOARD_TOKEN }}" \
             -H "Content-Type: application/json" \
             --max-time 30)
-
           body=$(echo "$response" | head -n -1)
           status=$(echo "$response" | tail -n 1)
-
-          echo "Response status: $status"
-          echo "Response body: $body"
-
+          echo "Status: $status | Response: $body"
           if [ "$status" -eq 200 ] || [ "$status" -eq 202 ]; then
-            echo "✅ Agent triggered successfully!"
+            echo "✅ Main pipeline triggered!"
           else
-            echo "❌ Failed to trigger agent (HTTP $status)"
-            exit 1
+            echo "❌ Failed (HTTP $status)"; exit 1
+          fi
+
+      - name: Trigger Follow-Up on Render
+        if: github.event.schedule == '0 14 * * 1-5'
+        run: |
+          echo "Triggering follow-up pipeline..."
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://outreach-agent-eo4a.onrender.com/run/followup" \
+            -H "Authorization: Bearer ${{ secrets.DASHBOARD_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --max-time 30)
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "Status: $status | Response: $body"
+          if [ "$status" -eq 200 ] || [ "$status" -eq 202 ]; then
+            echo "✅ Follow-up pipeline triggered!"
+          else
+            echo "❌ Failed (HTTP $status)"; exit 1
           fi
